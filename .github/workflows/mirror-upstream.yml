@@ -40,6 +40,7 @@ jobs:
           curl -fsSL "https://codeload.github.com/openaccountants/openaccountants/tar.gz/refs/heads/main" -o /tmp/up.tar.gz
           mkdir -p /tmp/up
           tar -xzf /tmp/up.tar.gz -C /tmp/up --wildcards '*/agent-skills/*' --strip-components=2
+          [ -d /tmp/up/agent-skills ] || { echo "upstream has no agent-skills tree; skipping skills sync"; exit 0; }
           rsync -a --delete --include='*/' --include='SKILL.md' --exclude='*' /tmp/up/agent-skills/ skills/
           # prune skill folders upstream retired
           find skills -mindepth 1 -maxdepth 1 -type d -empty -delete
