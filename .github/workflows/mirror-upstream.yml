@@ -17,7 +17,7 @@ jobs:
         run: |
           set -eu
           curl -fsSL "https://raw.githubusercontent.com/openaccountants/openaccountants/main/plugins/openaccountants-hermes/plugin.json" -o /tmp/plugin.json || echo "upstream plugin.json not merged yet; keeping ours"
-          [ -s /tmp/plugin.json ] && python3 - <<'PY'
+          if [ -s /tmp/plugin.json ]; then python3 - <<'PY'
           import json
           mine = json.load(open("plugin.json"))
           try:
@@ -33,6 +33,7 @@ jobs:
               json.dump(mine, open("plugin.json", "w"), indent=2, ensure_ascii=False)
               print("plugin.json updated")
           PY
+          fi
       - name: Sync skills tree from upstream agent-skills
         run: |
           set -eu
