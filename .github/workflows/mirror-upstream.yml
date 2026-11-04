@@ -1,0 +1,56 @@
+name: mirror-upstream
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync plugin.json version from upstream
+        run: |
+          set -eu
+          curl -fsSL "https://raw.githubusercontent.com/openaccountants/openaccountants/main/plugins/openaccountants-hermes/plugin.json" -o /tmp/plugin.json
+          python3 - <<'PY'
+          import json
+          mine = json.load(open("plugin.json"))
+          try:
+              theirs = json.load(open("/tmp/plugin.json"))
+          except Exception:
+              raise SystemExit(0)  # upstream bundle not merged yet; keep ours
+          changed = False
+          for field in ("version", "description"):
+              if theirs.get(field) and mine.get(field) != theirs[field]:
+                  mine[field] = theirs[field]
+                  changed = True
+          if changed:
+              json.dump(mine, open("plugin.json", "w"), indent=2, ensure_ascii=False)
+              print("plugin.json updated")
+          PY
+      - name: Sync skills tree from upstream agent-skills
+        run: |
+          set -eu
+          curl -fsSL "https://codeload.github.com/openaccountants/openaccountants/tar.gz/refs/heads/main" -o /tmp/up.tar.gz
+          mkdir -p /tmp/up
+          tar -xzf /tmp/up.tar.gz -C /tmp/up --wildcards '*/agent-skills/*' --strip-components=2
+          rsync -a --delete --include='*/' --include='SKILL.md' --exclude='*' /tmp/up/agent-skills/ skills/
+          # prune skill folders upstream retired
+          find skills -mindepth 1 -maxdepth 1 -type d -empty -delete
+      - name: Commit and push if changed
+        run: |
+          set -eu
+          git config user.name "oa-mirror-bot"
+          git config user.email "mirror@onyxsystems.local"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "mirror: sync from openaccountants/openaccountants main ($(date -u +%Y-%m-%dT%H:%MZ))"
+            git push
+          else
+            echo "up to date"
+          fi
