@@ -16,8 +16,8 @@ jobs:
       - name: Sync plugin.json version from upstream
         run: |
           set -eu
-          curl -fsSL "https://raw.githubusercontent.com/openaccountants/openaccountants/main/plugins/openaccountants-hermes/plugin.json" -o /tmp/plugin.json
-          python3 - <<'PY'
+          curl -fsSL "https://raw.githubusercontent.com/openaccountants/openaccountants/main/plugins/openaccountants-hermes/plugin.json" -o /tmp/plugin.json || echo "upstream plugin.json not merged yet; keeping ours"
+          [ -s /tmp/plugin.json ] && python3 - <<'PY'
           import json
           mine = json.load(open("plugin.json"))
           try:
